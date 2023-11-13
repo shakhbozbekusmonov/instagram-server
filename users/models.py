@@ -54,7 +54,7 @@ class User(AbstractUser, BaseModel):
         code = "".join([str(random.randint(0, 100) % 10) for _ in range(4)])
         UserConfirmation.objects.create(
             user_id=self.id,
-            verify_code=verify_type,
+            verify_type=verify_type,
             code=code
         )
         return code
@@ -71,7 +71,7 @@ class User(AbstractUser, BaseModel):
             normalize_email = self.email.lower()
             self.email = normalize_email
 
-    def check_password(self):
+    def check_pass(self):
         if not self.password:
             temp_password = f"password-{uuid.uuid4().__str__().split('-')[-1]}"
             self.password = temp_password
@@ -90,12 +90,11 @@ class User(AbstractUser, BaseModel):
     def clean(self):
         self.check_username()
         self.check_email()
-        self.check_password()
+        self.check_pass()
         self.hashing_password()
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.clean()
+        self.clean()
         super(User, self).save(*args, **kwargs)
 
 
@@ -118,9 +117,8 @@ class UserConfirmation(BaseModel):
         return str(self.user.__str__())
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            if self.verify_type == VIA_EMAIL:
-                self.expiration_time = datetime.now() + timedelta(minutes=EMAIL_EXPIRE)
-            else:
-                self.expiration_time = datetime.now() + timedelta(minutes=PHONE_EXPIRE)
+        if self.verify_type == VIA_EMAIL:
+            self.expiration_time = datetime.now() + timedelta(minutes=EMAIL_EXPIRE)
+        else:
+            self.expiration_time = datetime.now() + timedelta(minutes=PHONE_EXPIRE)
         super(UserConfirmation, self).save(*args, **kwargs)
